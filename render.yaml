@@ -1,0 +1,16 @@
+# render.yaml — deploy BioTutor on Render using the Dockerfile.
+#
+# IMPORTANT: an LLM needs memory. The FREE plan (512 MB) CANNOT run this model.
+# Use at least the "standard" plan (2 GB RAM). CPU inference is slow (a few seconds per
+# reply); for fast responses you need a GPU host. For a free option, Hugging Face Spaces
+# (CPU, 16 GB) is a good alternative — see the README.
+services:
+  - type: web
+    name: biotutor
+    runtime: docker
+    plan: standard          # >= 2 GB RAM required; free tier will fail
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "8000"

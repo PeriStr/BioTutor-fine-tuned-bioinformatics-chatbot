@@ -1,0 +1,24 @@
+# Keep the image lean. NOTE: backend/biotutor-lora/ is intentionally NOT ignored, so a
+# trained adapter (if present locally) gets baked into the image.
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# The training notebook and generated splits are not needed to serve the app.
+training/
+data/train.jsonl
+data/val.jsonl
+*.zip
+
+# Keep ONLY the final adapter (~49 MB); exclude the heavy training checkpoints (~145 MB each).
+backend/biotutor-lora/checkpoint-*/
+
+# Runtime database (do not bake into the image)
+*.db
+backend/chats.db

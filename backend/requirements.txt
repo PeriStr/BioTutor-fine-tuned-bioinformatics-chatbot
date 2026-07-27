@@ -1,0 +1,9 @@
+# BioTutor backend dependencies.
+# Note on torch: on a plain machine `pip install torch` gives the CPU build (works fine,
+# just slower). For a CUDA GPU, install the matching wheel from https://pytorch.org.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+transformers>=4.44,<4.46
+peft>=0.12,<0.14
+accelerate>=0.33
+torch>=2.2
