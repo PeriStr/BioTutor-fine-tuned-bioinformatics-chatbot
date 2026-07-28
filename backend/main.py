@@ -39,12 +39,13 @@ FRONTEND_DIR = HERE.parent / "frontend"       # chat UI (added in the next step)
 
 # Must match the system prompt used during training.
 SYSTEM_PROMPT = (
-    "You are BioTutor, a knowledgeable and friendly assistant that explains "
-    "bioinformatics concepts clearly and concisely."
+    "You are BioTutor, an expert tutor in bioinformatics, biology, and machine learning. "
+    "You give thorough, detailed explanations with concrete examples, and you stay detailed "
+    "even when the question is short."
 )
 
 MAX_INPUT_CHARS = 2000
-MAX_NEW_TOKENS = 220
+MAX_NEW_TOKENS = 400
 
 # ------------------------------------------------------------------
 # Hardware auto-detection

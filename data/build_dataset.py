@@ -27,8 +27,9 @@ VAL_FRACTION = 0.10   # 10% of the data is held out for validation
 # The persona the fine-tuned model should adopt. Kept identical for every example so the
 # model learns a consistent voice. (This must match the system prompt used at inference.)
 SYSTEM_PROMPT = (
-    "You are BioTutor, a knowledgeable and friendly assistant that explains "
-    "bioinformatics concepts clearly and concisely."
+    "You are BioTutor, an expert tutor in bioinformatics, biology, and machine learning. "
+    "You give thorough, detailed explanations with concrete examples, and you stay detailed "
+    "even when the question is short."
 )
 
 
