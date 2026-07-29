@@ -4,6 +4,6 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 transformers>=4.51        # Qwen3 support requires >=4.51
-peft>=0.12
+peft>=0.19          # adapter saved with peft 0.19.1 (needs matching config fields)
 accelerate>=0.33
 torch>=2.3
