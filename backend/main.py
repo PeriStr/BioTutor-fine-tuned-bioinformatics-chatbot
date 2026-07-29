@@ -1,16 +1,20 @@
 """
 main.py — BioTutor backend (FastAPI)
 
-Loads TinyLlama-1.1B-Chat plus our fine-tuned LoRA adapter and serves a chat endpoint.
+Loads Qwen3-4B-Instruct plus our fine-tuned LoRA adapter and serves a chat endpoint.
 
 Hardware auto-detection:
   - If a CUDA GPU is available -> load in float16 on the GPU (fast).
-  - Otherwise -> load in float32 on the CPU (works everywhere, just slower).
+  - Otherwise -> load in bfloat16 on the CPU (works, but a 4B model is slow on CPU).
 
 Where the adapter goes:
-  Unzip `biotutor-lora.zip` (downloaded from the training notebook) into this folder,
-  so that `backend/biotutor-lora/` contains the adapter files. If it is missing, the
+  Unzip `biotutor-qwen3-lora.zip` (downloaded from the training notebook) into this folder,
+  so that `backend/biotutor-qwen3-lora/` contains the adapter files. If it is missing, the
   server still starts using the base model, so you can test the API without the adapter.
+
+Note on CPU deployment (e.g. Oracle free tier): a 4B model in PyTorch on CPU needs ~8GB RAM
+and is slow. For a snappy CPU server, use the GGUF Q4 export from the notebook with
+llama.cpp / Ollama instead of this PyTorch backend.
 
 Run:
     pip install -r requirements.txt
@@ -32,9 +36,9 @@ import db
 # ------------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------------
-BASE_MODEL = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+BASE_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 HERE = Path(__file__).resolve().parent
-ADAPTER_DIR = HERE / "biotutor-lora"          # unzip biotutor-lora.zip here
+ADAPTER_DIR = HERE / "biotutor-qwen3-lora"    # unzip biotutor-qwen3-lora.zip here
 FRONTEND_DIR = HERE.parent / "frontend"       # chat UI (added in the next step)
 
 # Must match the system prompt used during training.
@@ -52,7 +56,8 @@ MAX_NEW_TOKENS = 400
 # ------------------------------------------------------------------
 USE_GPU = torch.cuda.is_available()
 DEVICE = "cuda" if USE_GPU else "cpu"
-DTYPE = torch.float16 if USE_GPU else torch.float32   # fp16 needs a GPU; CPU uses fp32
+# fp16 on GPU; bfloat16 on CPU (halves RAM vs fp32 and avoids the fp16-on-CPU op errors).
+DTYPE = torch.float16 if USE_GPU else torch.bfloat16
 print(f"[BioTutor] device={DEVICE}, dtype={DTYPE}")
 
 
@@ -90,24 +95,25 @@ tokenizer, model, ADAPTER_LOADED = load_model()
 # ------------------------------------------------------------------
 @torch.inference_mode()
 def generate_answer(question: str) -> str:
-    """Format the prompt, generate greedily, and clean up the output."""
-    prompt = (
-        f"<|system|>\n{SYSTEM_PROMPT}</s>\n"
-        f"<|user|>\n{question}</s>\n"
-        f"<|assistant|>\n"
-    )
-    inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
+    """Build the prompt with the model's own chat template, generate, and clean up."""
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user",   "content": question},
+    ]
+    # apply_chat_template inserts the exact special tokens Qwen expects and the
+    # trailing assistant marker (add_generation_prompt=True).
+    inputs = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=True, return_tensors="pt"
+    ).to(DEVICE)
     out = model.generate(
-        **inputs,
+        inputs,
         max_new_tokens=MAX_NEW_TOKENS,
         do_sample=False,                       # greedy: focused, stops on EOS
-        repetition_penalty=1.2,
-        eos_token_id=tokenizer.eos_token_id,
+        repetition_penalty=1.1,
         pad_token_id=tokenizer.eos_token_id,
     )
     # Keep only the newly generated tokens (drop the prompt).
-    text = tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-    return text.split("<|")[0].strip()         # safety guard against leftover markers
+    return tokenizer.decode(out[0][inputs.shape[1]:], skip_special_tokens=True).strip()
 
 
 # ------------------------------------------------------------------
